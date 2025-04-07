@@ -200,7 +200,7 @@ class {{ class }} extends Model
                 $logs = $model->generateChangelog($model, 'Updated fields: {counts}');
 
                 if(!empty($logs) && $logs instanceof (new \App\Models\ModelChangelog()) && $logs->model_class === get_class($model)){
-                    $logs->modelChangelogItem()->saveMany($items);
+                    $logs->changelogItem()->saveMany($items);
                 }
             }
         }
