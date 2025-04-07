@@ -45,4 +45,21 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    /**
+     * Primary Key Relation
+     * 
+     * @return model
+     */
+    public function wallet()
+    {
+        return $this->hasMany(\App\Models\Wallet::class, 'user_id');
+    }
+
+    /**
+     * Foreign Key Relation
+     * 
+     * @return model
+     */
+    //
 }
