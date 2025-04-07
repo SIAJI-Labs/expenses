@@ -95,13 +95,13 @@ class {{ class }} extends Model
      *
      * Generate Changelog
      */
-    protected function scopeGenerateChangelog($query, $model, $message = null): \App\Models\Changelog
+    protected function scopeGenerateChangelog($query, $model, $message = null)
     {
         // Store to Model Changelog
         $cacheKey = "model_changelog-".get_class($model)."-".$model->id;
         $logs = \Illuminate\Support\Facades\Cache::remember($cacheKey, (15 * 60), function() use ($model){
             // Define changelog actor
-            $actor = match(true) => {
+            $actor = match(true){
                 \Illuminate\Support\Facades\Auth::check() => [
                     'model' => get_class(\Illuminate\Support\Facades\Auth::user()),
                     'id' => \Illuminate\Support\Facades\Auth::user()->id
@@ -113,7 +113,7 @@ class {{ class }} extends Model
             };
 
             // Initialize model changelog
-            $result = \new App\Models\ModelChangelog([
+            $result = new \App\Models\ModelChangelog([
                 'model_class' => get_class($model),
                 'model_id' => $model->id,
                 'message' => $message ?? 'Data successfully added!',
