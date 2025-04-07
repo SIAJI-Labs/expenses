@@ -2,6 +2,9 @@
 
 namespace {{ namespace }};
 
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -12,6 +15,12 @@ class {{ class }} extends Seeder
      */
     public function run(): void
     {
+        // Truncate related model data
+        // Schema::disableForeignKeyConstraints();
+        // DB::table((new \App\Models\User())->getTable())->truncate();
+        // Schema::enableForeignKeyConstraints();
+
+        // Actual logic for related Seeder
         //
     }
 }

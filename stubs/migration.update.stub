@@ -11,9 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('{{ table }}', function (Blueprint $table) {
-            //
-        });
+        if(!Schema::hasColumn('{{ table }}', 'column')){
+            Schema::table('{{ table }}', function (Blueprint $table) {
+                //
+            });
+        }
     }
 
     /**
@@ -21,8 +23,11 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('{{ table }}', function (Blueprint $table) {
-            //
-        });
+        if(Schema::hasColumn('{{ table }}', 'column')){
+            Schema::table('{{ table }}', function (Blueprint $table) {
+                // $table->dropForeign('{{ table }}_column_foreign');
+                $table->dropColumn('column');
+            });
+        }
     }
 };
