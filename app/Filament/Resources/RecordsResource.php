@@ -375,12 +375,10 @@ class RecordsResource extends Resource
                     ->formatStateUsing(fn (string $state): string => ucwords($state))
                     ->description(fn ($record) => $record->category?->name_with_parent ?? 'Uncategorized'),
                 TextColumn::make('fromWallet.name_with_parent')
-                    ->label('Source')
-                    ->sortable(),
+                    ->label('Source'),
                 TextColumn::make('toWallet.name_with_parent')
                     ->label('Target')
-                    ->default('-')
-                    ->sortable(),
+                    ->default('-'),
                 TextColumn::make('amount')
                     ->label('Amount')
                     ->numeric()
@@ -390,6 +388,9 @@ class RecordsResource extends Resource
                     ->description(function ($record) {
                         return $record->extra_amount ? 'Extra: ' . number_format($record->extra_amount, 2).(!empty($record->extra_percentage) ? ' ('.$record->extra_percentage.'%)' : null) : null;
                     })
+                    ->sortable(),
+                TextColumn::make('timestamp')
+                    ->dateTime('d M, Y / H:i')
                     ->sortable(),
                 TextColumn::make('tags_count')
                     ->label('Tags')
@@ -510,7 +511,8 @@ class RecordsResource extends Resource
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
-            ]);
+            ])
+            ->defaultSort('timestamp', 'desc');
     }
 
     public static function getRelations(): array
