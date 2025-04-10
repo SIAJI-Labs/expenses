@@ -2,12 +2,12 @@
 
 namespace App\Filament\Resources\CategoriesResource\Pages;
 
-use App\Filament\Resources\CategoriesResource;
-use Filament\Actions;
-use Filament\Resources\Pages\CreateRecord;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Request;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
+
+use App\Filament\Resources\CategoriesResource;
+use Filament\Resources\Pages\CreateRecord;
 use Filament\Support\Exceptions\Halt;
 use Throwable;
 
@@ -42,6 +42,9 @@ class CreateCategories extends CreateRecord
         return $model;
     }
 
+    /**
+     * Override Create function from CreateRecord
+     */
     public function create(bool $another = false): void
     {
         $this->authorizeAccess();
@@ -80,14 +83,10 @@ class CreateCategories extends CreateRecord
 
         $this->getCreatedNotification()?->send();
 
-        \Illuminate\Support\Facades\Log::debug("Debug on Categories Create function", [
-            'another' => isset($another) ? $another : '-',
-            'parent_id' => $data['parent_id'] ?? null
-        ]);
-
         if ($another) {
             $state = [];
-            $state['parent_id'] = session()->pull('create_categories.parent_id');
+            // Keep selected parent
+            $state['parent_id'] = $data['parent_id'];
 
             // Prepare a fresh form
             $this->record = null;
