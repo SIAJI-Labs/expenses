@@ -71,6 +71,27 @@ class WalletsResource extends Resource
                     ->label('Name')
                     ->sortable()
                     ->searchable(),
+                TextColumn::make('walletBalance.balance')
+                    ->label('Balance')
+                    ->numeric()
+                    ->formatStateUsing(function ($record) {
+                        return number_format($record->walletBalance->balance, 2);
+                    })
+                    ->description(function ($record) {
+                        if($record->child->count() > 0){
+                            $accumulated = $record->walletBalance->balance;
+                            foreach($record->child as $child){
+                                $balance = $child->walletBalance->balance;
+
+                                $accumulated += $balance;
+                            }
+
+                            return 'Accumulated: '.number_format($accumulated, 2);
+                        }
+
+                        return null;
+                    })
+                    ->sortable(),
                 TextColumn::make('order_main')
                     ->label('Order')
                     ->sortable()
