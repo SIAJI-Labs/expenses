@@ -16,7 +16,7 @@ class {{ class }} extends Model
      * @var array
      */
     protected $fillable = [
-        // 
+        'request_id',
     ];
 
     /**
