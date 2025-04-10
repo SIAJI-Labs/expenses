@@ -1,29 +1,22 @@
 <?php
 
-namespace App\Models;
+namespace App\Models\View;
 
-use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
-class Wallet extends Model
+class WalletBalances extends Model
 {
-    use SoftDeletes;
-
     /**
      * The attributes that are mass assignable.
      *
      * @var array
      */
     protected $fillable = [
-        'request_id',
-        'user_id',
-        'parent_id',
+        'id',
         'name',
-        'initial_balance',
-        'order', // order of the group (based on parent_id)
-        'order_main' // order of all data
+        'balance'
     ];
 
     /**
@@ -60,28 +53,14 @@ class Wallet extends Model
      * 
      * @return model
      */
-    public function child()
-    {
-        return $this->hasMany(\App\Models\Wallet::class, 'parent_id');
-    }
-    public function walletBalance()
-    {
-        return $this->hasOne(\App\Models\View\WalletBalances::class, 'id');
-    }
+    // 
 
     /**
      * Foreign Key Relation
      * 
      * @return model
      */
-    public function parent()
-    {
-        return $this->belongsTo(\App\Models\Wallet::class, 'parent_id');
-    }
-    public function user()
-    {
-        return $this->belongsTo(\App\Models\User::class, 'user_id');
-    }
+    // 
 
     /**
      * The "boot" method of the model.
@@ -96,97 +75,23 @@ class Wallet extends Model
         static::creating(function ($model) {
             // Always generate UUID on Data Create
             $model->{'uuid'} = Str::uuid()->toString();
-
-            // Adjust Order
-            $order = 0;
-            $order_main = 0;
-            // Check for order group
-            if(!empty($model->parent_id)){
-                $parent = \App\Models\Wallet::find($model->parent_id);
-                $exists = \App\Models\Wallet::where('parent_id', $model->parent_id)
-                    ->orderBy('order_main', 'desc')
-                    ->first();
-                if(!empty($exists)){
-                    $order = $exists->order + 1;
-                    $order_main = $exists->order_main + 1;
-                } else {
-                    // First child of the group
-                    $order = $parent->order + 1;
-                    $order_main = $parent->order_main + 1;
-                }
-            } else {
-                $exists = \App\Models\Wallet::whereNull('parent_id')
-                    ->orderBy('order_main', 'desc')
-                    ->first();
-                if(!empty($exists)){
-                    $order_main = $exists->order_main + 1;
-                }
-            }
-
-            // Adjust order & order_main accordingly
-            $model->{'order'} = $order;
-            $model->{'order_main'} = $order_main;
         });
 
         // Listen to Created Event
         static::created(function ($model) {
             // Store to Model Changelog
             $model->generateChangelog($model);
-
-            // Adjust the order
-            $model->adjustOrder();
         });
 
         // Listen to Updated Event
         static::updated(function ($model) {
             // Generate Changelog
             $model->generateChangelogItem($model);
-
-            if($model->isDirty('parent_id')){
-                $order = 0;
-                $order_main = 0;
-                if(empty($model->parent_id)){
-                    $exists = \App\Models\Wallet::orderBy('order_main', 'desc')
-                        ->first();
-                    if(!empty($exists)){
-                        $order_main = $exists->order_main + 1;
-                    }
-                } else {
-                    $parent = \App\Models\Wallet::find($model->parent_id);
-                    $exists = \App\Models\Wallet::where('parent_id', $model->parent_id)
-                        ->orderBy('order_main', 'desc')
-                        ->first();
-                    if(!empty($exists)){
-                        $order = $exists->order + 1;
-                        $order_main = $exists->order_main + 1;
-                    } else {
-                        // First child of the group
-                        $order = $parent->order + 1;
-                        $order_main = $parent->order_main + 1;
-                    }
-                }
-                $model->order = $order;
-                $model->order_main = $order_main;
-                $model->saveQuietly();
-
-                // Adjust the order
-                $model->adjustOrder();
-            }
-        });
-
-        // Listen to Deleted Event
-        static::deleted(function ($model) {
-            $model->order = null;
-            $model->order_main = null;
-            $model->saveQuietly();
-
-            // Adjust the order
-            $model->adjustOrder();
         });
     }
 
     /**
-     * Scope
+     *
      *
      * Generate Changelog
      */
@@ -194,7 +99,7 @@ class Wallet extends Model
     {
         // Store to Model Changelog
         $cacheKey = "model_changelog-".get_class($model)."-".$model->id;
-        $logs = \Illuminate\Support\Facades\Cache::remember($cacheKey, (15 * 60), function() use ($model, $message){
+        $logs = \Illuminate\Support\Facades\Cache::remember($cacheKey, (15 * 60), function() use ($model){
             // Define changelog actor
             $actor = match(true){
                 \Illuminate\Support\Facades\Auth::check() => [
@@ -299,53 +204,5 @@ class Wallet extends Model
                 }
             }
         }
-    }
-
-    /**
-     * Scope
-     * 
-     * Adjust wallet order
-     */
-    protected function scopeAdjustOrder($query): void
-    {
-        $data = \App\Models\Wallet::with([
-                'child'
-            ])
-            ->whereNull('parent_id')
-            ->orderBy('order_main')
-            ->get();
-
-        $order_main = 0;
-        foreach($data as $item){
-            $item->order_main = $order_main;
-            $item->saveQuietly();
-
-            // Loop for child
-            if(count($item->child) > 0){
-                $order = 0;
-                foreach($item->child as $child){
-                    $order += 1;
-                    $order_main += 1;
-                    
-                    $child->order = $order;
-                    $child->order_main = $order_main;
-                    $child->saveQuietly();
-                }
-            }
-
-            $order_main += 1;
-        }
-    }
-
-    /**
-     * Attribute
-     * 
-     * Create formated attribute for name with parent
-     */
-    protected function nameWithParent(): Attribute
-    {
-        return Attribute::make(
-            get: fn () => ($this->parent ? $this->parent->name.' - ' : '').$this->name,
-        );
     }
 }
