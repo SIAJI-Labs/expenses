@@ -318,40 +318,44 @@ class RecordsResource extends Resource
                     ])
                     ->columnSpanFull(),
 
-                // TODO Task: Tags
-                // Select::make('tags_id')
-                //     ->label('Tags')
-                //     ->multiple()
-                //     ->native(false)
-                //     ->preload()
-                //     ->createOptionForm([
-                //         TextInput::make('name')
-                //             ->placeholder('Name')
-                //             ->required()
-                //             ->maxLength(191)
-                //             ->columnSpanFull(),
-                //     ])
-                //     ->createOptionUsing(function (array $data): \App\Models\Tag {
-                //         // Add the request_id if available
-                //         $request_id = request()->header('request-id', null);
-                //         $data['request_id'] = $request_id;
-                //         $data['user_id'] = \Illuminate\Support\Facades\Auth::user()->id;
+                Select::make('tags_id')
+                    ->label('Tags')
+                    ->relationship(
+                        name: 'tags',
+                        titleAttribute: 'name',
+                        modifyQueryUsing: fn(Builder $query) => $query->orderBy('name', 'asc')
+                    )
+                    ->multiple()
+                    ->native(false)
+                    ->preload()
+                    ->createOptionForm([
+                        TextInput::make('name')
+                            ->placeholder('Name')
+                            ->required()
+                            ->maxLength(191)
+                            ->columnSpanFull(),
+                    ])
+                    ->createOptionUsing(function (array $data): \App\Models\Tag {
+                        // Add the request_id if available
+                        $request_id = request()->header('request-id', null);
+                        $data['request_id'] = $request_id;
+                        $data['user_id'] = \Illuminate\Support\Facades\Auth::user()->id;
 
-                //         // Check for existing tag with the same request_id
-                //         $existingTag = !empty($data['request_id']) 
-                //             ? \App\Models\Tag::where(DB::raw('BINARY `request_id`'), $data['request_id'])->first()
-                //             : null;
+                        // Check for existing tag with the same request_id
+                        $existingTag = !empty($data['request_id']) 
+                            ? \App\Models\Tag::where(DB::raw('BINARY `request_id`'), $data['request_id'])->first()
+                            : null;
 
-                //         // If tag doesn't exist, create a new one
-                //         if (!$existingTag) {
-                //             return \App\Models\Tag::create($data);
-                //         }
+                        // If tag doesn't exist, create a new one
+                        if (!$existingTag) {
+                            return \App\Models\Tag::create($data);
+                        }
 
-                //         // If tag exists with the same request_id, return the existing one
-                //         return $existingTag;
-                //     })
-                //     ->searchable()
-                //     ->columnSpanFull(),
+                        // If tag exists with the same request_id, return the existing one
+                        return $existingTag;
+                    })
+                    ->searchable()
+                    ->columnSpanFull(),
             ])
             ->reactive();
     }
@@ -372,12 +376,10 @@ class RecordsResource extends Resource
                     ->description(fn ($record) => $record->category?->name_with_parent ?? 'Uncategorized'),
                 TextColumn::make('fromWallet.name_with_parent')
                     ->label('Source')
-                    ->searchable()
                     ->sortable(),
                 TextColumn::make('toWallet.name_with_parent')
                     ->label('Target')
                     ->default('-')
-                    ->searchable()
                     ->sortable(),
                 TextColumn::make('amount')
                     ->label('Amount')
@@ -389,6 +391,10 @@ class RecordsResource extends Resource
                         return $record->extra_amount ? 'Extra: ' . number_format($record->extra_amount, 2).(!empty($record->extra_percentage) ? ' ('.$record->extra_percentage.'%)' : null) : null;
                     })
                     ->sortable(),
+                TextColumn::make('tags_count')
+                    ->label('Tags')
+                    ->counts('tags')
+                    ->badge()
             ])
             ->filters([
                 SelectFilter::make('type')
@@ -409,13 +415,40 @@ class RecordsResource extends Resource
                             ->pluck('name_with_parent', 'id')
                             ->all();
                 
-                        // Add "Uncategorized" with a fake ID like 'uncategorized'
+                        // Add "Uncategorized" with a fake ID like 'uncategorized-9hpwQ1Nsga' for records with null value of category_id
                         return ['uncategorized-9hpwQ1Nsga' => 'Uncategorized'] + $categories;
                     })
                     ->native(false)
                     ->searchable()
                     ->multiple()
-                    ->preload(),
+                    ->preload()
+                    ->query(function (Builder $query, array $data) {
+                        // If no category is selected, return all records (when 'values' is empty)
+                        if (empty($data['values'])) {
+                            return $query;  // Return the query unmodified to show all records
+                        }
+
+                        // Apply filtering for categories
+                        $categoryIds = $data['values'];
+
+                        // Check if "Uncategorized" is selected
+                        $uncategorizedSelected = in_array('uncategorized-9hpwQ1Nsga', $categoryIds);
+
+                        // If "Uncategorized" is selected, filter records with category_id is null
+                        if ($uncategorizedSelected) {
+                            $query->whereNull('category_id');
+                        }
+
+                        // Remove the "Uncategorized" option from the category IDs to filter the remaining categories
+                        $categoryIds = array_diff($categoryIds, ['uncategorized-9hpwQ1Nsga']);
+
+                        // Apply filtering for other selected categories if there are any
+                        if (!empty($categoryIds)) {
+                            $query->orWhereIn('category_id', $categoryIds);
+                        }
+
+                        return $query;
+                    }),
                 SelectFilter::make('from_wallet_id')
                     ->label('Source')
                     ->options(function(){
@@ -442,6 +475,29 @@ class RecordsResource extends Resource
                     ->searchable()
                     ->multiple()
                     ->preload(),
+                SelectFilter::make('tags')
+                    ->label('Tags')
+                    ->options(function(){
+                        return \App\Models\Tag::orderBy('name', 'asc')
+                            ->get()
+                            ->pluck('name', 'id')
+                            ->all();
+                    })
+                    ->native(false)
+                    ->searchable()
+                    ->multiple()
+                    ->preload()
+                    ->query(function (Builder $query, array $data) {
+                        // If no tags are selected, return all records (when 'values' is empty)
+                        if (empty($data['values'])) {
+                            return $query;  // Return the query unmodified to show all records
+                        }
+
+                        // Apply filtering when tags are selected
+                        $query->whereHas('tags', function (Builder $query) use ($data) {
+                            $query->whereIn('tags.id', $data['values']); // Use the 'values' key here
+                        });
+                    }),
                 Filter::make('is_hidden')
                     ->label('Include Hidden records')
                     ->toggle()

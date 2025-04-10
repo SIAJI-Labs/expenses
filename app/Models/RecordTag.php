@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
-class Tag extends Model
+class RecordTag extends Model
 {
     use SoftDeletes;
 
@@ -17,8 +17,6 @@ class Tag extends Model
      */
     protected $fillable = [
         'request_id',
-        'user_id',
-        'name'
     ];
 
     /**
@@ -62,14 +60,7 @@ class Tag extends Model
      * 
      * @return model
      */
-    public function user()
-    {
-        return $this->belongsTo(\App\Models\User::class, 'user_id');
-    }
-    public function records()
-    {
-        return $this->belongsToMany(\App\Models\Record::class, (new \App\Models\RecordTag())->getTable(), 'tag_id', 'record_id');
-    }
+    // 
 
     /**
      * The "boot" method of the model.

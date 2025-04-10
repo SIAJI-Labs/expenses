@@ -86,6 +86,10 @@ class Record extends Model
     {
         return $this->belongsTo(\App\Models\Wallet::class, 'to_wallet_id')->withTrashed();
     }
+    public function tags()
+    {
+        return $this->belongsToMany(\App\Models\Tag::class, (new \App\Models\RecordTag())->getTable(), 'record_id', 'tag_id');
+    }
 
     /**
      * The "boot" method of the model.
