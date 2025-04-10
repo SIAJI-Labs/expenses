@@ -1,15 +1,15 @@
 <?php
 
-namespace App\Filament\Resources\WalletsResource\Pages;
+namespace App\Filament\Resources\CategoriesResource\Pages;
 
-use App\Filament\Resources\WalletsResource;
+use App\Filament\Resources\CategoriesResource;
 use Filament\Actions;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
 
-class EditWallets extends EditRecord
+class EditCategories extends EditRecord
 {
-    protected static string $resource = WalletsResource::class;
+    protected static string $resource = CategoriesResource::class;
 
     protected function getRedirectUrl(): string
     {
@@ -17,7 +17,7 @@ class EditWallets extends EditRecord
         
         return $resource::getUrl('index');
     }
-    
+
     protected function getHeaderActions(): array
     {
         $resource = static::getResource();
@@ -44,12 +44,12 @@ class EditWallets extends EditRecord
                 // Validate self reference
                 if((int)$form['parent_id'] === (int)$data->id){
                     $proceed = false;
-                    $message = 'Can\'t self references, please select another wallet as it\'s parent!';
+                    $message = 'Can\'t self references, please select another category as it\'s parent!';
                 } else {
-                    // Validate if data is used as parent on another wallet
+                    // Validate if data is used as parent on another category
                     if(count($data->child) > 0){
                         $proceed = false;
-                        $message = 'This data is used as parent wallet on another wallet, please remove it first!';
+                        $message = 'This data is used as parent category on another category, please remove it first!';
                     }
                 }
             }
