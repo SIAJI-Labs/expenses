@@ -30,6 +30,7 @@ class CategoriesResource extends Resource
         return $form
         ->schema([
             Select::make('parent_id')
+                ->label('Parent')
                 ->columnSpanFull()
                 ->options(function(){
                     return \App\Models\Category::whereNull('parent_id')
@@ -39,7 +40,6 @@ class CategoriesResource extends Resource
                         ->all();
                 })
                 ->native(false)
-                ->default(request()->query('parent_id'))
                 ->searchable(),
             TextInput::make('name')
                 ->placeholder('Name')
@@ -77,6 +77,7 @@ class CategoriesResource extends Resource
                     ->native(false)
                     ->searchable(),
             ])
+            ->deselectAllRecordsWhenFiltered(true)
             ->defaultSort('order_main', 'asc')
             ->actions([
                 Tables\Actions\EditAction::make(),
