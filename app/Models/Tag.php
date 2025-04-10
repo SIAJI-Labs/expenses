@@ -66,6 +66,10 @@ class Tag extends Model
     {
         return $this->belongsTo(\App\Models\User::class, 'user_id');
     }
+    public function records()
+    {
+        return $this->belongsToMany(\App\Models\Record::class, (new \App\Models\RecordTag())->getTable(), 'tag_id', 'record_id');
+    }
 
     /**
      * The "boot" method of the model.

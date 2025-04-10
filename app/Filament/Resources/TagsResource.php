@@ -47,6 +47,7 @@ class TagsResource extends Resource
             ->filters([
                 //
             ])
+            ->deselectAllRecordsWhenFiltered(true)
             ->actions([
                 Tables\Actions\EditAction::make(),
             ])

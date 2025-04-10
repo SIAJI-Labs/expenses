@@ -35,6 +35,7 @@ class WalletsResource extends Resource
         return $form
             ->schema([
                 Select::make('parent_id')
+                    ->label('Parent')
                     ->columnSpanFull()
                     ->options(function(){
                         return \App\Models\Wallet::whereNull('parent_id')
@@ -52,6 +53,8 @@ class WalletsResource extends Resource
                 TextInput::make('initial_balance')
                     ->placeholder('Initial Balance')
                     ->required()
+                    ->mask(RawJs::make('$money($input)'))
+                    ->stripCharacters(',')
                     ->numeric()
                     ->default(0)
             ]);
@@ -85,6 +88,7 @@ class WalletsResource extends Resource
                     ->native(false)
                     ->searchable(),
             ])
+            ->deselectAllRecordsWhenFiltered(true)
             ->defaultSort('order_main', 'asc')
             ->actions([
                 Tables\Actions\EditAction::make(),

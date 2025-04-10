@@ -2,12 +2,11 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
-class Category extends Model
+class RecordTag extends Model
 {
     use SoftDeletes;
 
@@ -18,11 +17,6 @@ class Category extends Model
      */
     protected $fillable = [
         'request_id',
-        'user_id',
-        'parent_id',
-        'name',
-        'order', // order of the group (based on parent_id)
-        'order_main' // order of all data
     ];
 
     /**
@@ -59,24 +53,14 @@ class Category extends Model
      * 
      * @return model
      */
-    public function child()
-    {
-        return $this->hasMany(\App\Models\Category::class, 'parent_id');
-    }
+    // 
 
     /**
      * Foreign Key Relation
      * 
      * @return model
      */
-    public function parent()
-    {
-        return $this->belongsTo(\App\Models\Category::class, 'parent_id');
-    }
-    public function user()
-    {
-        return $this->belongsTo(\App\Models\User::class, 'user_id');
-    }
+    // 
 
     /**
      * The "boot" method of the model.
@@ -91,92 +75,18 @@ class Category extends Model
         static::creating(function ($model) {
             // Always generate UUID on Data Create
             $model->{'uuid'} = Str::uuid()->toString();
-
-            // Adjust Order
-            $order = 0;
-            $order_main = 0;
-            // Check for order group
-            if(!empty($model->parent_id)){
-                $parent = \App\Models\Category::find($model->parent_id);
-                $exists = \App\Models\Category::where('parent_id', $model->parent_id)
-                    ->orderBy('order_main', 'desc')
-                    ->first();
-                if(!empty($exists)){
-                    $order = $exists->order + 1;
-                    $order_main = $exists->order_main + 1;
-                } else {
-                    // First child of the group
-                    $order = $parent->order + 1;
-                    $order_main = $parent->order_main + 1;
-                }
-            } else {
-                $exists = \App\Models\Category::whereNull('parent_id')
-                    ->orderBy('order_main', 'desc')
-                    ->first();
-                if(!empty($exists)){
-                    $order_main = $exists->order_main + 1;
-                }
-            }
-
-            // Adjust order & order_main accordingly
-            $model->{'order'} = $order;
-            $model->{'order_main'} = $order_main;
         });
 
         // Listen to Created Event
         static::created(function ($model) {
             // Store to Model Changelog
             $model->generateChangelog($model);
-
-            // Adjust the order
-            $model->adjustOrder();
         });
 
         // Listen to Updated Event
         static::updated(function ($model) {
             // Generate Changelog
             $model->generateChangelogItem($model);
-
-            if($model->isDirty('parent_id')){
-                $order = 0;
-                $order_main = 0;
-                if(empty($model->parent_id)){
-                    $exists = \App\Models\Category::orderBy('order_main', 'desc')
-                        ->first();
-                    if(!empty($exists)){
-                        $order_main = $exists->order_main + 1;
-                    }
-                } else {
-                    $parent = \App\Models\Category::find($model->parent_id);
-                    $exists = \App\Models\Category::where('parent_id', $model->parent_id)
-                        ->orderBy('order_main', 'desc')
-                        ->first();
-                    if(!empty($exists)){
-                        $order = $exists->order + 1;
-                        $order_main = $exists->order_main + 1;
-                    } else {
-                        // First child of the group
-                        $order = $parent->order + 1;
-                        $order_main = $parent->order_main + 1;
-                    }
-                }
-                $model->order = $order;
-                $model->order_main = $order_main;
-                $model->saveQuietly();
-
-                // Adjust the order
-                $model->adjustOrder();
-            }
-        });
-
-        // Listen to Deleted Event
-        static::deleted(function ($model) {
-            $model->order = null;
-            $model->order_main = null;
-            $model->saveQuietly();
-
-            // Adjust the order
-            $model->adjustOrder();
         });
     }
 
@@ -294,53 +204,5 @@ class Category extends Model
                 }
             }
         }
-    }
-
-    /**
-     * Scope
-     * 
-     * Adjust wallet order
-     */
-    protected function scopeAdjustOrder($query): void
-    {
-        $data = \App\Models\Category::with([
-                'child'
-            ])
-            ->whereNull('parent_id')
-            ->orderBy('order_main')
-            ->get();
-
-        $order_main = 0;
-        foreach($data as $item){
-            $item->order_main = $order_main;
-            $item->saveQuietly();
-
-            // Loop for child
-            if(count($item->child) > 0){
-                $order = 0;
-                foreach($item->child as $child){
-                    $order += 1;
-                    $order_main += 1;
-                    
-                    $child->order = $order;
-                    $child->order_main = $order_main;
-                    $child->saveQuietly();
-                }
-            }
-
-            $order_main += 1;
-        }
-    }
-
-    /**
-     * Attribute
-     * 
-     * Create formated attribute for name with parent
-     */
-    protected function nameWithParent(): Attribute
-    {
-        return Attribute::make(
-            get: fn () => ($this->parent ? $this->parent->name.' - ' : '').$this->name,
-        );
     }
 }
