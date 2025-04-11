@@ -381,6 +381,11 @@ class RecordsResource extends Resource
                     ->default('-'),
                 TextColumn::make('amount')
                     ->label('Amount')
+                    ->color(fn ($record) => match($record->type){
+                        'income' => 'success',
+                        'expense' => 'danger',
+                        default => 'gray'
+                    })
                     ->numeric()
                     ->formatStateUsing(function ($record) {
                         return number_format($record->amount + $record->extra_amount, 2);
@@ -391,7 +396,10 @@ class RecordsResource extends Resource
                     ->sortable(),
                 TextColumn::make('timestamp')
                     ->dateTime('d M, Y / H:i')
-                    ->sortable(),
+                    ->sortable()
+                    ->description(function ($record) {
+                        return $record->is_hidden ? '[hidden]' : null;
+                    }),
                 TextColumn::make('tags_count')
                     ->label('Tags')
                     ->counts('tags')
@@ -500,8 +508,16 @@ class RecordsResource extends Resource
                         });
                     }),
                 Filter::make('is_hidden')
-                    ->label('Include Hidden records')
+                    ->label('Hidden records')
                     ->toggle()
+                    ->query(function (Builder $query, $state) {
+                        \Illuminate\Support\Facades\Log::debug("Debug on Toggle Filter", [
+                            'state' => $state
+                        ]);
+
+                        $query->where('is_hidden', isset($state['isActive']));
+                    })
+                    ->baseQuery(fn (Builder $query) => $query->where('is_hidden', false))
             ])
             ->deselectAllRecordsWhenFiltered(true)
             ->actions([

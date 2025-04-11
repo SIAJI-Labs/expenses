@@ -141,12 +141,4 @@ class WalletsResource extends Resource
             'edit' => Pages\EditWallets::route('/{record}/edit'),
         ];
     }
-
-    public static function getEloquentQuery(): Builder
-    {
-        return parent::getEloquentQuery()
-            ->withoutGlobalScopes([
-                SoftDeletingScope::class,
-            ]);
-    }
 }

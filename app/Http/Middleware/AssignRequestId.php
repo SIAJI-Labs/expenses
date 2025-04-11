@@ -15,7 +15,7 @@ class AssignRequestId
      */
     public function handle(Request $request, Closure $next): Response
     {
-        $id = (string) generateRandomMixCharacter(32);
+        $id = (string) generateRandomMixCharacter(32, false);
 
         // Assign Request ID to Request
         if(!$request->headers->has('Request-Id')){
