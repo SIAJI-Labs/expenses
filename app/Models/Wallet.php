@@ -348,4 +348,36 @@ class Wallet extends Model
             get: fn () => ($this->parent ? $this->parent->name.' - ' : '').$this->name,
         );
     }
+
+    /**
+     * Get the wallet balance
+     */
+    public function finalBalance(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => (function(){
+                $result = 0;
+                $is_exists = true;
+
+                // Validate if relation is not eager load
+                if(!$this->relationLoaded('walletBalance') && $this->walletBalance){
+                    $is_exists = false;
+
+                    // $baseQuery = $this->walletBalance();
+                    // if($baseQuery->exists()){
+                    //     $is_exists = true;
+                    // }
+
+                    // Check if the relationship exists in the eager-loaded data
+                    $is_exists = $this->walletBalance !== null;
+                }
+
+                if($is_exists){
+                    $result = $this->walletBalance->balance;
+                }
+
+                return $result;
+            })(),
+        );
+    }
 }
