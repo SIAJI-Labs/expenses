@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Request;
 
 class WalletRelationManager extends RelationManager
 {
@@ -93,7 +94,8 @@ class WalletRelationManager extends RelationManager
             ->recordTitleAttribute('wallet_id')
             ->columns([
                 Tables\Columns\TextColumn::make('name_with_parent')
-                    ->label('Name'),
+                    ->label('Name')
+                    ->searchable(),
                 Tables\Columns\TextColumn::make('final_balance')
                     ->label('Balance')
                     ->numeric()
@@ -170,6 +172,59 @@ class WalletRelationManager extends RelationManager
                     ]),
             ])
             ->actions([
+                Tables\Actions\Action::make('adjustBalance')
+                    ->label('Adjust Balance')
+                    ->icon('heroicon-o-currency-dollar')
+                    ->form([
+                        Forms\Components\TextInput::make('actual')
+                            ->label('Actual Balance')
+                            ->numeric()
+                            ->required()
+                            ->mask(RawJs::make('$money($input)'))
+                            ->stripCharacters(',')
+                            ->default(fn ($record) => $record->final_balance ?? 0)
+                            ->hint(fn(Model $record) => 'Current Balance: '.(number_format($record->final_balance ?? 0, 2))),
+                        Forms\Components\Textarea::make('notes')
+                            ->label('Notes')
+                            ->maxLength(255)
+                            ->default('Balance adjustment'),
+                        Forms\Components\Toggle::make('is_hidden')
+                            ->default(true)
+                    ])
+                    ->action(function (array $data, $record) {
+                        $currentBalance = $record->final_balance;
+                        $newBalance = (float) $data['actual'];
+                        $note = $data['notes'] ?? null;
+                        $is_hidden = $data['is_hidden'] ?? false;
+
+                        $type = 'expense';
+                        $difference = $newBalance - $currentBalance;
+                        if ($difference > 0) {
+                            $type = 'income';
+                        } else if($difference < 0) {
+                            $difference *= -1;
+                        } else {
+                            return;
+
+                        }
+
+                        // Create record for related adjustment
+                        $request_id = Request::header('request-id', null);
+                        $exists = !empty($request_id) ? \App\Models\Record::where(DB::raw('BINARY `request_id`'), $request_id)->first() : null;
+                        if(empty($exists)){
+                            $data = new \App\Models\Record([
+                                'user_id' => \Illuminate\Support\Facades\Auth::user()->id,
+                                'type' => $type,
+                                'from_wallet_id' => $record->id,
+                                'amount' => $difference,
+                                'is_hidden' => $is_hidden,
+                                'timestamp' => \Carbon\Carbon::now()
+                            ]);
+                            $data->save();
+                        }
+                    })
+                    ->modalHeading('Adjust Wallet Balance')
+                    ->color('info'),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DetachAction::make()
             ])

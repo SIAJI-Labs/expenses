@@ -24,6 +24,7 @@ use Filament\Tables;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -507,17 +508,16 @@ class RecordsResource extends Resource
                             $query->whereIn('tags.id', $data['values']); // Use the 'values' key here
                         });
                     }),
-                Filter::make('is_hidden')
-                    ->label('Hidden records')
-                    ->toggle()
-                    ->query(function (Builder $query, $state) {
-                        \Illuminate\Support\Facades\Log::debug("Debug on Toggle Filter", [
-                            'state' => $state
-                        ]);
-
-                        $query->where('is_hidden', isset($state['isActive']));
-                    })
-                    ->baseQuery(fn (Builder $query) => $query->where('is_hidden', false))
+                TernaryFilter::make('is_hidden')
+                    ->label('Is hidden')
+                    ->placeholder('Only Visible')
+                    ->trueLabel('Only Hidden')
+                    ->falseLabel('All records')
+                    ->queries(
+                        true: fn (Builder $query) => $query->where('is_hidden', true),
+                        false: fn (Builder $query) => $query->whereIn('is_hidden', [false, true]),
+                        blank: fn (Builder $query) => $query->where('is_hidden', false),
+                    )
             ])
             ->deselectAllRecordsWhenFiltered(true)
             ->actions([

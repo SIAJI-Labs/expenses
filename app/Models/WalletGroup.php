@@ -68,7 +68,8 @@ class WalletGroup extends Model
     }
     public function wallet()
     {
-        return $this->belongsToMany(\App\Models\Wallet::class, (new \App\Models\WalletGroupItem())->getTable(), 'wallet_group_id', 'wallet_id');
+        return $this->belongsToMany(\App\Models\Wallet::class, (new \App\Models\WalletGroupItem())->getTable(), 'wallet_group_id', 'wallet_id')
+            ->orderBy('order_main', 'asc');
     }
 
     /**
