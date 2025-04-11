@@ -84,7 +84,7 @@ class RecordsResource extends Resource
                     ->relationship(
                         name: 'category',
                         titleAttribute: 'name',
-                        modifyQueryUsing: fn(Builder $query) => $query->orderBy('order_main', 'asc')
+                        modifyQueryUsing: fn(Builder $query) => $query->orderBy('order_main', 'asc')->whereNull('deleted_at')
                     )
                     ->getOptionLabelFromRecordUsing(fn (Model $record) => $record->name_with_parent)
                     ->preload()
@@ -137,7 +137,7 @@ class RecordsResource extends Resource
                     ->relationship(
                         name: 'fromWallet',
                         titleAttribute: 'name',
-                        modifyQueryUsing: fn(Builder $query) => $query->orderBy('order_main', 'asc')
+                        modifyQueryUsing: fn(Builder $query) => $query->orderBy('order_main', 'asc')->whereNull('deleted_at')
                     )
                     ->getOptionLabelFromRecordUsing(fn (Model $record) => $record->name_with_parent)
                     ->native(false)
@@ -196,7 +196,7 @@ class RecordsResource extends Resource
                     ->relationship(
                         name: 'toWallet',
                         titleAttribute: 'name',
-                        modifyQueryUsing: fn(Builder $query) => $query->orderBy('order_main', 'asc')
+                        modifyQueryUsing: fn(Builder $query) => $query->orderBy('order_main', 'asc')->whereNull('deleted_at')
                     )
                     ->getOptionLabelFromRecordUsing(fn (Model $record) => $record->name_with_parent)
                     ->native(false)
@@ -242,6 +242,8 @@ class RecordsResource extends Resource
                     ->seconds(false)
                     ->native(false)
                     ->maxDate(\Carbon\Carbon::now()->setHour(23)->setMinute(59))
+                    ->default(\Carbon\Carbon::now()->setTimezone(\Illuminate\Support\Facades\Auth::user()->user_timezone))
+                    ->timezone(\Illuminate\Support\Facades\Auth::user()->user_timezone)
                     ->columnSpanFull()
                     ->required(),
 
@@ -397,6 +399,7 @@ class RecordsResource extends Resource
                     ->sortable(),
                 TextColumn::make('timestamp')
                     ->dateTime('d M, Y / H:i')
+                    ->timezone(fn ($record) => $record->user->user_timezone)
                     ->sortable()
                     ->description(function ($record) {
                         return $record->is_hidden ? '[hidden]' : null;
