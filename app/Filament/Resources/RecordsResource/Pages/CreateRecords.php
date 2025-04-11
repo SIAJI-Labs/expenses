@@ -94,8 +94,13 @@ class CreateRecords extends CreateRecord
                 'tags_id'
             ];
             foreach($keep as $column){
-                $state[$column] = $data[$column];
+                if(isset($data[$column])){
+                    $state[$column] = $data[$column];
+                }
             }
+
+            // Update Timestamp
+            $state['timestamp'] = \Carbon\Carbon::now()->setTimezone(\Illuminate\Support\Facades\Auth::user()->user_timezone);
 
             // Prepare a fresh form
             $this->record = null;
