@@ -26,7 +26,8 @@ class Record extends Model
         'amount',
         'extra_amount',
         'extra_percentage',
-        'notes'
+        'notes',
+        'is_hidden',
     ];
 
     /**
@@ -45,7 +46,9 @@ class Record extends Model
      */
     protected function casts(): array
     {
-        return [];
+        return [
+            'is_hidden' => 'boolean'
+        ];
     }
 
     /**
